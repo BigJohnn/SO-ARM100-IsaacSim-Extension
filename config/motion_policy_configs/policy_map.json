@@ -1,0 +1,5 @@
+{
+	"SO100":{
+		"RMPflow" : "./SO100/rmpflow/config.json"
+	}
+}

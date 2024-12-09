@@ -1,0 +1,10 @@
+{
+    "end_effector_frame_name": "Moving_Jaw",
+    "maximum_substep_size" : 0.00334,
+    "ignore_robot_state_updates" : false,
+    "relative_asset_paths": {
+        "robot_description_path" : "robot_descriptor.yaml",
+        "urdf_path": "../urdf/SO_5DOF_ARM100_8j_URDF.SLDASM.urdf",
+        "rmpflow_config_path" : "so100_rmpflow_common.yaml"
+    }
+}

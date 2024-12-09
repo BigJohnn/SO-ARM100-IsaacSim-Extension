@@ -8,10 +8,10 @@
 
 # Artificially limit the robot joints.  For example:
 # A joint with range +-pi would be limited to +-(pi-.01)
-joint_limit_buffers: [.01, .01, .01, .01, .01, .01]
+api_version: 1.0
 
-# RMPflow has many modifiable parameters, but these serve as a great start.
-# Most parameters will not need to be modified
+joint_limit_buffers: [.01, .01, .01, .01, .01] #, .01
+
 rmp_params:
     cspace_target_rmp:
         metric_scalar: 50.
@@ -20,7 +20,7 @@ rmp_params:
         robust_position_term_thresh: .5
         inertia: 1.
     cspace_trajectory_rmp:
-        p_gain: 100.
+        p_gain: 80.
         d_gain: 10.
         ff_gain: .25
         weight: 50.
@@ -28,7 +28,7 @@ rmp_params:
         final_handover_time_std_dev: .25
         weight: 2000.
     joint_limit_rmp:
-        metric_scalar: 1000.
+        metric_scalar: 1000 #1000.
         metric_length_scale: .01
         metric_exploder_eps: 1e-3
         metric_velocity_gate_length_scale: .01
@@ -37,65 +37,60 @@ rmp_params:
         accel_potential_exploder_length_scale: .1
         accel_potential_exploder_eps: 1e-2
     joint_velocity_cap_rmp:
-        max_velocity: 1.
-        velocity_damping_region: .3
-        damping_gain: 1000.0
-        metric_weight: 100.
+        max_velocity: 2.15
+        velocity_damping_region: 0.5
+        damping_gain: 300.
+        metric_weight: 100 #100.
     target_rmp:
-        accel_p_gain: 30.
-        accel_d_gain: 85.
-        accel_norm_eps: .075
-        metric_alpha_length_scale: .05
-        min_metric_alpha: .01
-        max_metric_scalar: 10000
-        min_metric_scalar: 2500
-        proximity_metric_boost_scalar: 20.
-        proximity_metric_boost_length_scale: .02
-        xi_estimator_gate_std_dev: 20000.
-        accept_user_weights: false 
+        accel_p_gain: 120 # 80.
+        accel_d_gain: 80 # 120.
+        accel_norm_eps: 0.075 # .075
+        metric_alpha_length_scale: .05 #.05
+        min_metric_alpha: 0.01 #.01
+        max_metric_scalar: 3000 # 10000.
+        min_metric_scalar: 500 #2500.
+        proximity_metric_boost_scalar: 20 # 20.
+        proximity_metric_boost_length_scale: .02 # .02
+        accept_user_weights: false
+        proximity_metric_boost_length_scalar: 1
+        inertia: 1.
     axis_target_rmp:
-        accel_p_gain: 210.
-        accel_d_gain: 60.
-        metric_scalar: 10
-        proximity_metric_boost_scalar: 3000.
-        proximity_metric_boost_length_scale: .08
-        xi_estimator_gate_std_dev: 20000.
+        accel_p_gain: 200 # 200.
+        accel_d_gain: 40 # 40.
+        metric_scalar: 10 #10.
+        proximity_metric_boost_scalar: 3000 # 3000.
+        proximity_metric_boost_length_scale: .05
         accept_user_weights: false
     collision_rmp:
         damping_gain: 50.
         damping_std_dev: .04
         damping_robustness_eps: 1e-2
         damping_velocity_gate_length_scale: .01
-        repulsion_gain: 800.
+        repulsion_gain: 1200.
         repulsion_std_dev: .01
         metric_modulation_radius: .5
-        metric_scalar: 10000.
+        metric_scalar: 7000 #10000.
         metric_exploder_std_dev: .02
         metric_exploder_eps: .001
     damping_rmp:
         accel_d_gain: 30.
-        metric_scalar: 50.
-        inertia: 100.
+        metric_scalar: 50 #50.
+        inertia: 100 #100.
 
 canonical_resolve:
     max_acceleration_norm: 50.
     projection_tolerance: .01
     verbose: false
 
-
 # body_cylinders are used to promote self-collision avoidance between the robot and its base
 # The example below defines the robot base to be a capsule defined by the absolute coordinates pt1 and pt2.
 # The semantic name provided for each body_cylinder does not need to be present in the robot URDF.
 
 body_cylinders:
-  - name: base
-    pt1: [0, 0, 0.12]
-    pt2: [0, 0, 0.0]
-    radius: 0.08
-  - name: second_link
-    pt1: [0, 0, 0.12]
-    pt2: [0, 0, 0.12]
-    radius: 0.16
+  - name: base_link
+    pt1: [0, 0, 0.22]
+    pt2: [0, 0, 0]
+    radius: .09
 
 # body_collision_controllers defines spheres located at specified frames in the robot URDF
 # These spheres will not be allowed to collide with the capsules enumerated under body_cylinders

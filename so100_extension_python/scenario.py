@@ -8,6 +8,7 @@
 #
 
 import numpy as np
+import carb
 from omni.isaac.core.articulations import Articulation
 from omni.isaac.core.objects import DynamicCuboid, FixedCuboid, GroundPlane
 from omni.isaac.core.prims import XFormPrim
@@ -22,6 +23,13 @@ from omni.isaac.nucleus import get_assets_root_path
 
 from omni.isaac.motion_generation.interface_config_loader import get_supported_robot_policy_pairs
 
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.articulations import Articulation
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.prims import XFormPrim
+from omni.isaac.core.utils.numpy.rotations import euler_angles_to_quats
+
+from omni.isaac.motion_generation import ArticulationKinematicsSolver, LulaKinematicsSolver
 
 class SO100RmpFlowScript:
     def __init__(self):
@@ -32,6 +40,7 @@ class SO100RmpFlowScript:
         self._target = None
 
         self._script_generator = None
+        self._dbg_mode = False
 
     def load_example_assets(self):
         """Load assets onto the stage and return them so they can be registered with the
@@ -54,7 +63,7 @@ class SO100RmpFlowScript:
         self._target = XFormPrim(
             "/World/target",
             scale=[0.04, 0.04, 0.04],
-            position=np.array([0.4, 0, 0.025]),
+            position=np.array([0.22, 0, 0.08]),
             orientation=euler_angles_to_quats([0, np.pi, 0]),
         )
 
@@ -62,15 +71,15 @@ class SO100RmpFlowScript:
             FixedCuboid(
                 name="ob1",
                 prim_path="/World/obstacle_1",
-                scale=np.array([0.03, 1.0, 0.15]),
-                position=np.array([0.25, 0.25, 0.1]),
+                scale=np.array([0.03, 1.0, 0.05]),
+                position=np.array([0.15, 0.25, 0.1]),
                 color=np.array([1.0, 1.0, 0.0]),
             ),
             FixedCuboid(
                 name="ob2",
                 prim_path="/World/obstacle_2",
-                scale=np.array([0.5, 0.03, 0.15]),
-                position=np.array([0.5, 0.25, 0.1]),
+                scale=np.array([0.5, 0.03, 0.05]),
+                position=np.array([0.45, 0.25, 0.1]),
                 color=np.array([1.0, 1.0, 0.0]),
             ),
         ]
@@ -113,6 +122,14 @@ class SO100RmpFlowScript:
 
         # Create a script generator to execute my_script().
         self._script_generator = self.my_script()
+        
+        if self._dbg_mode:
+            self._rmpflow.set_ignore_state_updates(True)
+            self._rmpflow.visualize_collision_spheres()
+
+            # Set the robot gains to be deliberately poor
+            bad_proportional_gains = self._articulation.get_articulation_controller().get_gains()[0]/50
+            self._articulation.get_articulation_controller().set_gains(kps = bad_proportional_gains)
 
     def reset(self):
         """
@@ -126,6 +143,11 @@ class SO100RmpFlowScript:
         """
         # Start the script over by recreating the generator.
         self._script_generator = self.my_script()
+        
+        if self._dbg_mode:
+            # RMPflow was set to roll out robot state internally, assuming that all returned joint targets were hit exactly.
+            self._rmpflow.reset()
+            self._rmpflow.visualize_collision_spheres()
 
     """
     The following two functions demonstrate the mechanics of running code in a script-like way
@@ -257,3 +279,97 @@ class SO100RmpFlowScript:
             yield ()
 
         return True
+
+class SO100FollowScript:
+    def __init__(self):
+
+        self._articulation = None
+        self._target = None
+
+        self._script_generator = None
+
+    def load_example_assets(self):
+        """Load assets onto the stage and return them so they can be registered with the
+        core.World.
+
+        This function is called from ui_builder._setup_scene()
+
+        The position in which things are loaded is also the position to which
+        they will be returned on reset.
+        """
+        ################# use SO-Arm-100
+        robot_prim_path = "/World"
+        path_to_robot_usd = "/home/hph/Documents/so100_follower/so100.usd"
+        ################# use SO-Arm-100
+
+        add_reference_to_stage(path_to_robot_usd, robot_prim_path)
+        self._articulation = Articulation(robot_prim_path, position=np.array([0,0,0]))
+
+        add_reference_to_stage(get_assets_root_path() + "/Isaac/Props/UIElements/frame_prim.usd", "/World/target")
+        self._target = XFormPrim(
+            "/World/target",
+            scale=[0.04, 0.04, 0.04],
+            position=np.array([0.22, 0, 0.05]),
+            orientation=euler_angles_to_quats([0, np.pi, 0]),
+        )
+
+        self._ground_plane = GroundPlane("/World/Ground")
+
+        # Return assets that were added to the stage so that they can be registered with the core.World
+        return self._articulation, self._target, self._ground_plane
+
+    def setup(self):
+        """
+        This function is called after assets have been loaded from ui_builder._setup_scenario().
+        """
+        
+        kinematics_config_dir = "/home/hph/Documents/so100_follower/so100_ext/config/motion_policy_configs"
+
+        self._kinematics_solver = LulaKinematicsSolver(
+            robot_description_path = kinematics_config_dir + "/SO100/rmpflow/robot_descriptor.yaml",
+            urdf_path = kinematics_config_dir + "/SO100/urdf/SO_5DOF_ARM100_8j_URDF.SLDASM.urdf"
+        )
+
+        print("Valid frame names at which to compute kinematics:", self._kinematics_solver.get_all_frame_names())
+
+        end_effector_name = "Moving_Jaw"
+        self._articulation_kinematics_solver = ArticulationKinematicsSolver(self._articulation,self._kinematics_solver, end_effector_name)
+        
+    def reset(self):
+        """
+        This function is called when the reset button is pressed.
+        In this example the core.World takes care of all necessary resetting
+        by putting everything back in the position it was in when loaded.
+
+        In more complicated scripts, e.g. scripts that modify or create USD properties
+        or attributes at runtime, the user will need to implement necessary resetting
+        behavior to ensure their script runs deterministically.
+        """
+        # Start the script over by recreating the generator.
+        # self._script_generator = self.my_script()
+        
+
+    """
+    The following two functions demonstrate the mechanics of running code in a script-like way
+    from a UI-based extension.  This takes advantage of Python's yield/generator framework.  
+
+    The update() function is tied to a physics subscription, which means that it will be called
+    one time on every physics step (usually 60 frames per second).  Each time it is called, it
+    queries the script generator using next().  This makes the script generator execute until it hits
+    a yield().  In this case, no value need be yielded.  This behavior can be nested into subroutines
+    using the "yield from" keywords.
+    """
+
+    def update(self, step: float):
+        target_position, target_orientation = self._target.get_world_pose()
+
+        #Track any movements of the robot base
+        robot_base_translation,robot_base_orientation = self._articulation.get_world_pose()
+        self._kinematics_solver.set_robot_base_pose(robot_base_translation,robot_base_orientation)
+
+        action, success = self._articulation_kinematics_solver.compute_inverse_kinematics(target_position, target_orientation)
+
+        if success:
+            self._articulation.apply_action(action)
+        else:
+            carb.log_warn("IK did not converge to a solution.  No action is being taken")

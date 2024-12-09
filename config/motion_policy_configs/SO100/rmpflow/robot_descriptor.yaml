@@ -1,150 +1,184 @@
-# Copyright (c) 2019-2022, NVIDIA CORPORATION.  All rights reserved.
-#
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto.  Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
-
-# The robot descriptor defines the generalized coordinates and how to map those
+# The robot description defines the generalized coordinates and how to map those
 # to the underlying URDF dofs.
 
 api_version: 1.0
 
-
 # Defines the generalized coordinates. Each generalized coordinate is assumed
 # to have an entry in the URDF.
-# RMPflow will only use these joints to control the robot position.
+# Lula will only use these joints to control the robot position.
 cspace:
     - Rotation
     - Pitch
     - Elbow
     - Wrist_Pitch
     - Wrist_Roll
-    - Jaw
-
-
-# Global frame of the URDF
-root_link: Base
-
-# The default cspace position of this robot
+    # - Jaw
 default_q: [
-    0.0,0.3,1.2,0.0,0.0,0.0
+    0.0,0.0,-0.0,0.0,0.0 #,0.0
 ]
 
-acceleration_limits: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0]
-jerk_limits: [10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+acceleration_limits: [
+   10,10,10,10,10 #,10
+]
 
-# RMPflow uses collision spheres to define the robot geometry in order to avoid
-# collisions with external obstacles.  If no spheres are specified, RMPflow will
-# not be able to avoid obstacles.  
+jerk_limits: [
+   10000,10000,10000,10000,10000 #,10000
+]
+
+# Most dimensions of the cspace have a direct corresponding element
+# in the URDF. This list of rules defines how unspecified coordinates
+# should be extracted or how values in the URDF should be overwritten.
+
+cspace_to_urdf_rules:
+    - {name: Jaw, rule: fixed, value: 0.0}
+
+# Lula uses collision spheres to define the robot geometry in order to avoid
+# collisions with external obstacles.  If no spheres are specified, Lula will
+# not be able to avoid obstacles.
+
 collision_spheres:
+  - Base:
+    - "center": [0.0, -0.035, 0.046]
+      "radius": 0.02207
+    - "center": [-0.001, -0.022, 0.041]
+      "radius": 0.02142
+    - "center": [-0.0, -0.041, 0.048]
+      "radius": 0.02207
+    - "center": [0.001, -0.02, 0.054]
+      "radius": 0.01947
+    - "center": [-0.009, 0.009, 0.064]
+      "radius": 0.01686
+    - "center": [-0.016, 0.0, 0.023]
+      "radius": 0.01621
+    - "center": [0.011, 0.01, 0.066]
+      "radius": 0.01621
+    - "center": [0.016, 0.002, 0.028]
+      "radius": 0.01621
   - Rotation_Pitch:
-    - "center": [0.0, 0.08, 0.0]
-      "radius": 0.08
+    - "center": [-0.003, 0.016, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.088, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.024, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.032, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.04, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.048, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.056, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.064, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.072, 0.03]
+      "radius": 0.02172
+    - "center": [-0.003, 0.08, 0.03]
+      "radius": 0.02172
   - Upper_Arm:
-    - "center": [0.0, 0.025, 0]
-      "radius": 0.065
+    - "center": [-0.026, 0.02, 0.0]
+      "radius": 0.0219
+    - "center": [-0.003, 0.113, 0.012]
+      "radius": 0.0219
+    - "center": [0.021, 0.016, 0.0]
+      "radius": 0.0219
+    - "center": [0.001, 0.069, 0.0]
+      "radius": 0.0219
+    - "center": [0.022, 0.049, 0.0]
+      "radius": 0.0219
+    - "center": [-0.023, 0.051, 0.001]
+      "radius": 0.0219
+    - "center": [-0.0, 0.104, -0.0]
+      "radius": 0.02
   - Lower_Arm:
-    - "center": [0.0, 0.05, 0]
-      "radius": 0.055
+    - "center": [-0.005, 0.0, 0.025]
+      "radius": 0.02
+    - "center": [0.0, 0.0, 0.128]
+      "radius": 0.02
+    - "center": [-0.007, 0.0, 0.037]
+      "radius": 0.02
+    - "center": [-0.005, 0.0, 0.048]
+      "radius": 0.02
+    - "center": [-0.006, 0.0, 0.06]
+      "radius": 0.02
+    - "center": [-0.002, 0.0, 0.071]
+      "radius": 0.02
+    - "center": [-0.004, 0.0, 0.082]
+      "radius": 0.02
+    - "center": [-0.004, 0.0, 0.094]
+      "radius": 0.02
+    - "center": [-0.0, 0.0, 0.105]
+      "radius": 0.02
+    - "center": [0.0, 0.0, 0.117]
+      "radius": 0.02
   - Wrist_Pitch_Roll:
-    - "center": [0.0, 0.0, -0.05]
-      "radius": 0.05
-  - Fixed_Jaw:
+    - "center": [-0.001, -0.05, 0.0]
+      "radius": 0.02
     - "center": [0.0, 0.0, 0.0]
       "radius": 0.02
+    - "center": [-0.001, -0.044, 0.0]
+      "radius": 0.02
+    - "center": [-0.001, -0.039, 0.0]
+      "radius": 0.02
+    - "center": [-0.001, -0.033, 0.0]
+      "radius": 0.02
+    - "center": [-0.001, -0.028, 0.0]
+      "radius": 0.02
+    - "center": [-0.0, -0.022, 0.0]
+      "radius": 0.02
+    - "center": [-0.0, -0.017, 0.0]
+      "radius": 0.02
+    - "center": [-0.0, -0.011, 0.0]
+      "radius": 0.02
+    - "center": [-0.0, -0.006, 0.0]
+      "radius": 0.02
+  - Fixed_Jaw:
+    - "center": [0.0, -0.024, -0.001]
+      "radius": 0.008
+    - "center": [-0.018, -0.025, 0.002]
+      "radius": 0.008
+    - "center": [-0.003, -0.024, 0.004]
+      "radius": 0.008
+    - "center": [0.026, -0.041, -0.008]
+      "radius": 0.008
+    - "center": [0.029, -0.043, 0.007]
+      "radius": 0.008
+    - "center": [0.022, -0.012, 0.006]
+      "radius": 0.008
+    - "center": [0.003, -0.025, -0.005]
+      "radius": 0.008
+    - "center": [0.007, -0.02, 0.008]
+      "radius": 0.008
+    - "center": [0.016, -0.096, 0.0]
+      "radius": 0.008
+    - "center": [0.027, -0.051, 0.006]
+      "radius": 0.008
+    - "center": [0.025, -0.059, 0.005]
+      "radius": 0.008
+    - "center": [0.023, -0.068, 0.004]
+      "radius": 0.008
+    - "center": [0.02, -0.077, 0.002]
+      "radius": 0.008
+    - "center": [0.018, -0.086, 0.001]
+      "radius": 0.008
   - Moving_Jaw:
-    - "center": [0.0, 0.02, 0.0]
-      "radius": 0.015
-    
-# collision_spheres:
-#   - Base:
-#     - "center": [0.0, 0.0, 0.1]
-#       "radius": 0.08
-#     # - "center": [0.0, 0.0, 0.15]
-#     #   "radius": 0.08
-#     # - "center": [0.0, 0.0, 0.2]
-#     #   "radius": 0.08
-#   - Rotation_Pitch:
-#     - "center": [0.0, 0.08, 0.0]
-#       "radius": 0.08
-#     - "center": [0.0, 0.16, 0.0]
-#       "radius": 0.08
-#     - "center": [0.0, 0.175, 0.05]
-#       "radius": 0.065
-#     - "center": [0.0, 0.175, 0.1]
-#       "radius": 0.065
-#     - "center": [0.0, 0.175, 0.15]
-#       "radius": 0.065
-#     - "center": [0.0, 0.175, 0.2]
-#       "radius": 0.065
-#     - "center": [0.0, 0.175, 0.25]
-#       "radius": 0.065
-#     - "center": [0.0, 0.175, 0.3]
-#       "radius": 0.065 
-#     - "center": [0.0, 0.175, 0.35]
-#       "radius": 0.065
-#     - "center": [0.0, 0.175, 0.4]
-#       "radius": 0.065 
-#     - "center": [0.0, 0.175, 0.45]
-#       "radius": 0.065
-#     - "center": [0.0, 0.175, 0.5]
-#       "radius": 0.065 
-#     - "center": [0.0, 0.1, 0.5]
-#       "radius": 0.07
-#   - Upper_Arm:
-#     - "center": [0.0, 0.025, 0]
-#       "radius": 0.065
-#     - "center": [0.0, -0.025, 0]
-#       "radius": 0.065
-#     - "center": [0.0, -0.025, 0.05]
-#       "radius": 0.065
-#     - "center": [0.0, -0.025, 0.1]
-#       "radius": 0.065
-#     - "center": [0.0, -0.025, 0.15]
-#       "radius": 0.06
-#     - "center": [0.0, -0.025, 0.2]
-#       "radius": 0.06
-#     - "center": [0.0, -0.025, 0.25]
-#       "radius": 0.06
-#     - "center": [0.0, -0.025, 0.3]
-#       "radius": 0.06
-#     - "center": [0.0, -0.025, 0.35]
-#       "radius": 0.055
-#     - "center": [0.0, -0.025, 0.4]
-#       "radius": 0.055
-#   - Lower_Arm:
-#     - "center": [0.0, 0.05, 0]
-#       "radius": 0.055
-#     - "center": [0.0, 0.1, 0]
-#       "radius": 0.055
-#   - Wrist_Pitch_Roll:
-#     - "center": [0.0, 0.0, -0.05]
-#       "radius": 0.05
-#     - "center": [0.0, 0.0, -0.1]
-#       "radius": 0.05
-#     - "center": [0.0, 0.0, -0.15]
-#       "radius": 0.05
-#     - "center": [0.0, 0.0, 0.04]
-#       "radius": 0.035
-#     - "center": [0.0, 0.0, 0.08]
-#       "radius": 0.035
-#     - "center": [0.0, 0.0, 0.12]
-#       "radius": 0.035
-#   - Fixed_Jaw:
-#     - "center": [0.0, 0.0, 0.0]
-#       "radius": 0.02
-#     - "center": [0.0, -0.03, 0.025]
-#       "radius": 0.02
-#     - "center": [0.0, -0.05, 0.05]
-#       "radius": 0.02
-#   - Moving_Jaw:
-#     - "center": [0.0, 0.02, 0.0]
-#       "radius": 0.015
-#     - "center": [0.0, 0.02, 0.015]
-#       "radius": 0.015
-#     - "center": [0.0, 0.02, 0.03]
-#       "radius": 0.015
-#     - "center": [0.0, 0.025, 0.04]
-#       "radius": 0.01
+    - "center": [-0.003, -0.026, 0.006]
+      "radius": 0.008
+    - "center": [-0.005, -0.019, -0.008]
+      "radius": 0.008
+    - "center": [-0.003, -0.036, -0.005]
+      "radius": 0.008
+    - "center": [-0.003, -0.034, 0.005]
+      "radius": 0.008
+    - "center": [-0.006, -0.018, 0.014]
+      "radius": 0.008
+    - "center": [-0.003, -0.019, 0.004]
+      "radius": 0.008
+    - "center": [-0.002, -0.044, -0.005]
+      "radius": 0.008
+    - "center": [-0.003, -0.024, -0.006]
+      "radius": 0.008
+    - "center": [-0.006, -0.069, 0.0]
+      "radius": 0.008
+    - "center": [-0.004, -0.055, -0.003]
+      "radius": 0.008

@@ -18,7 +18,7 @@ from omni.isaac.ui.ui_utils import get_style
 from omni.usd import StageEventType
 from pxr import Sdf, UsdLux
 
-from .scenario import SO100RmpFlowScript
+from .scenario import SO100RmpFlowScript, SO100FollowScript
 
 
 class UIBuilder:
@@ -129,7 +129,12 @@ class UIBuilder:
     def _on_init(self):
         self._articulation = None
         self._cuboid = None
-        self._scenario = SO100RmpFlowScript()
+        
+        use_follow=False
+        if use_follow:
+            self._scenario = SO100FollowScript()
+        else:
+            self._scenario = SO100RmpFlowScript()
 
     def _add_light_to_stage(self):
         """

@@ -7,8 +7,10 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
 
+import asyncio
 import numpy as np
 import carb
+import time
 from omni.isaac.core.articulations import Articulation
 from omni.isaac.core.objects import DynamicCuboid, FixedCuboid, GroundPlane
 from omni.isaac.core.prims import XFormPrim
@@ -63,38 +65,42 @@ class SO100RmpFlowScript:
         self._target = XFormPrim(
             "/World/target",
             scale=[0.04, 0.04, 0.04],
-            position=np.array([0.22, 0, 0.08]),
-            orientation=euler_angles_to_quats([0, np.pi, 0]),
+            position=np.array([0.13, -0.1, 0.16]),
+            orientation=euler_angles_to_quats([np.pi,  0,np.pi]),
         )
-
-        self._obstacles = [
-            FixedCuboid(
-                name="ob1",
-                prim_path="/World/obstacle_1",
-                scale=np.array([0.03, 1.0, 0.05]),
-                position=np.array([0.15, 0.25, 0.1]),
-                color=np.array([1.0, 1.0, 0.0]),
-            ),
-            FixedCuboid(
-                name="ob2",
-                prim_path="/World/obstacle_2",
-                scale=np.array([0.5, 0.03, 0.05]),
-                position=np.array([0.45, 0.25, 0.1]),
-                color=np.array([1.0, 1.0, 0.0]),
-            ),
-        ]
 
         self._goal_block = DynamicCuboid(
             name="Cube",
-            position=np.array([0.4, 0, 0.025]),
+            # position=np.array([0.4, 0, 0.025]),
+            position=np.array([0.22, 0, 0.08]),
             prim_path="/World/pick_cube",
             size=0.05,
             color=np.array([1, 0, 0]),
         )
+        
+        self._obstacles = [
+            self._goal_block
+            # FixedCuboid(
+            #     name="ob1",
+            #     prim_path="/World/obstacle_1",
+            #     scale=np.array([0.03, 1.0, 0.05]),
+            #     position=np.array([0.15, 0.25, 0.1]),
+            #     color=np.array([1.0, 1.0, 0.0]),
+            # ),
+            # FixedCuboid(
+            #     name="ob2",
+            #     prim_path="/World/obstacle_2",
+            #     scale=np.array([0.5, 0.03, 0.05]),
+            #     position=np.array([0.45, 0.25, 0.1]),
+            #     color=np.array([1.0, 1.0, 0.0]),
+            # ),
+        ]
+
+        
         self._ground_plane = GroundPlane("/World/Ground")
 
         # Return assets that were added to the stage so that they can be registered with the core.World
-        return self._articulation, self._target, *self._obstacles, self._goal_block, self._ground_plane
+        return self._articulation, self._target, *self._obstacles, self._ground_plane #, self._goal_block
 
     def setup(self):
         """
@@ -161,59 +167,91 @@ class SO100RmpFlowScript:
     """
 
     def update(self, step: float):
+        
         try:
-            result = next(self._script_generator)
+            _ = next(self._script_generator)
         except StopIteration:
             return True
 
     def my_script(self):
-        translation_target, orientation_target = self._target.get_world_pose()
+        while True:  # 持续追踪目标
+            # 获取当前目标的位置和方向
+            translation_target, orientation_target = self._target.get_world_pose()
+            
+            # 获取机械臂基座的位置和方向
+            robot_base_translation, robot_base_orientation = self._articulation.get_world_pose()
+            
+            # 更新RMPFlow的基座姿态
+            self._rmpflow.set_robot_base_pose(robot_base_translation, robot_base_orientation)
+            
+            # 调用goto_position()函数去追踪当前目标位置
+            success = yield from self.goto_position(
+                translation_target, orientation_target, self._articulation, self._rmpflow, timeout=50
+            )
+            
+            # 检查是否成功到达目标
+            if not success:
+                print("Could not reach target position, retrying...")
+                continue  # 如果失败，继续循环重新获取目标位置
 
-        yield from self.close_gripper_so100(self._articulation) #TODO:
+            # # 可选：添加条件结束追踪（例如：目标达到某个状态、时间超时等）
+            # if self.should_stop_tracking():  # 自定义的结束条件函数
+            #     print("Tracking stopped.")
+            #     break
+            
+            # 小延迟避免过高频率更新，实际应用中可根据目标移动速度调整
+            # asyncio.sleep(delay=33)
+            yield()
+        # translation_target, orientation_target = self._target.get_world_pose()
+        
+        # robot_base_translation,robot_base_orientation = self._articulation.get_world_pose()
+        # self._rmpflow.set_robot_base_pose(robot_base_translation,robot_base_orientation)
+        
+        # yield from self.close_gripper_so100(self._articulation) #TODO:
 
-        # Notice that subroutines can still use return statements to exit.  goto_position() returns a boolean to indicate success.
-        success = yield from self.goto_position(
-            translation_target, orientation_target, self._articulation, self._rmpflow, timeout=200
-        )
+        # # Notice that subroutines can still use return statements to exit.  goto_position() returns a boolean to indicate success.
+        # success = yield from self.goto_position(
+        #     translation_target, orientation_target, self._articulation, self._rmpflow, timeout=200
+        # )
 
-        if not success:
-            print("Could not reach target position")
-            return
+        # if not success:
+        #     print("Could not reach target position")
+        #     return
 
-        yield from self.open_gripper_so100(self._articulation) #TODO:
+        # yield from self.open_gripper_so100(self._articulation) #TODO:
 
-        # Visualize the new target.
-        lower_translation_target = np.array([0.4, 0, 0.04])
-        self._target.set_world_pose(lower_translation_target, orientation_target)
+        # # Visualize the new target.
+        # lower_translation_target = np.array([0.22, 0.1, 0.04])
+        # self._target.set_world_pose(lower_translation_target, orientation_target)
 
-        success = yield from self.goto_position(
-            lower_translation_target, orientation_target, self._articulation, self._rmpflow, timeout=250
-        )
+        # success = yield from self.goto_position(
+        #     lower_translation_target, orientation_target, self._articulation, self._rmpflow, timeout=250
+        # )
 
-        yield from self.close_gripper_so100(self._articulation, close_position=np.array([0.02]), atol=0.006) #TODO:
+        # yield from self.close_gripper_so100(self._articulation, close_position=np.array([0.02]), atol=0.006) #TODO:
 
-        high_translation_target = np.array([0.4, 0, 0.4])
-        self._target.set_world_pose(high_translation_target, orientation_target)
+        # high_translation_target = np.array([0.4, 0, 0.4])
+        # self._target.set_world_pose(high_translation_target, orientation_target)
 
-        success = yield from self.goto_position(
-            high_translation_target, orientation_target, self._articulation, self._rmpflow, timeout=200
-        )
+        # success = yield from self.goto_position(
+        #     high_translation_target, orientation_target, self._articulation, self._rmpflow, timeout=200
+        # )
 
-        next_translation_target = np.array([0.4, 0.4, 0.4])
-        self._target.set_world_pose(next_translation_target, orientation_target)
+        # next_translation_target = np.array([0.4, 0.4, 0.4])
+        # self._target.set_world_pose(next_translation_target, orientation_target)
 
-        success = yield from self.goto_position(
-            next_translation_target, orientation_target, self._articulation, self._rmpflow, timeout=200
-        )
+        # success = yield from self.goto_position(
+        #     next_translation_target, orientation_target, self._articulation, self._rmpflow, timeout=200
+        # )
 
-        next_translation_target = np.array([0.4, 0.4, 0.25])
-        self._target.set_world_pose(next_translation_target, orientation_target)
+        # next_translation_target = np.array([0.4, 0.4, 0.25])
+        # self._target.set_world_pose(next_translation_target, orientation_target)
 
-        success = yield from self.goto_position(
-            next_translation_target, orientation_target, self._articulation, self._rmpflow, timeout=200
-        )
+        # success = yield from self.goto_position(
+        #     next_translation_target, orientation_target, self._articulation, self._rmpflow, timeout=200
+        # )
 
-        yield from self.open_gripper_so100(self._articulation) #TODO:
+        # yield from self.open_gripper_so100(self._articulation) #TODO:
 
     ################################### Functions
 
@@ -234,18 +272,25 @@ class SO100RmpFlowScript:
 
         articulation_motion_policy = ArticulationMotionPolicy(articulation, rmpflow, 1 / 60)
         rmpflow.set_end_effector_target(translation_target, orientation_target)
-
+        
+        base_trans, base_rot = articulation.get_world_pose()
+        base_rot_matrix = quats_to_rot_matrices(base_rot)  # 基座旋转矩阵
+        
         for i in range(timeout):
             ee_trans, ee_rot = rmpflow.get_end_effector_pose(
                 articulation_motion_policy.get_active_joints_subset().get_joint_positions()
             )
 
+            # ee_trans = base_rot_matrix @ ee_trans + base_trans  # 平移变换
+            # ee_rot = base_rot_matrix @ ee_rot  # 旋转变换
+            
             trans_dist = distance_metrics.weighted_translational_distance(ee_trans, translation_target)
             rotation_target = quats_to_rot_matrices(orientation_target)
             rot_dist = distance_metrics.rotational_distance_angle(ee_rot, rotation_target)
-
-            done = trans_dist < translation_thresh and rot_dist < orientation_thresh
-
+            
+            done = trans_dist < translation_thresh#  and rot_dist < orientation_thresh
+            # print("trans_dist==",trans_dist)
+            # print("rot_dist==",rot_dist)
             if done:
                 return True
 
@@ -260,13 +305,17 @@ class SO100RmpFlowScript:
         return False
 
     def open_gripper_so100(self, articulation):
-        open_gripper_action = ArticulationAction(np.array([0.04]), joint_indices=np.array([5]))
+        print('open_gripper_so100')
+        
+        p_open = 0.7
+        open_gripper_action = ArticulationAction(np.array([p_open]), joint_indices=np.array([5]))
         articulation.apply_action(open_gripper_action)
 
         # Check in once a frame until the gripper has been successfully opened.
-        while not np.allclose(articulation.get_joint_positions()[6:], np.array([0.04, 0.04]), atol=0.001):
+        while not np.allclose(articulation.get_joint_positions()[5:], np.array([p_open]), atol=0.001):
             yield ()
 
+        print('open_gripper_so100 done')
         return True
 
     def close_gripper_so100(self, articulation, close_position=np.array([0]), atol=0.001):
@@ -275,7 +324,7 @@ class SO100RmpFlowScript:
         articulation.apply_action(open_gripper_action)
 
         # Check in once a frame until the gripper has been successfully closed.
-        while not np.allclose(articulation.get_joint_positions()[6:], np.array(close_position), atol=atol):
+        while not np.allclose(articulation.get_joint_positions()[5:], np.array(close_position), atol=atol):
             yield ()
 
         return True
@@ -309,7 +358,7 @@ class SO100FollowScript:
         self._target = XFormPrim(
             "/World/target",
             scale=[0.04, 0.04, 0.04],
-            position=np.array([0.22, 0, 0.05]),
+            position=np.array([0.0036570001584201785, -0.17443716520711405, 0.20550990329078275]),
             orientation=euler_angles_to_quats([0, np.pi, 0]),
         )
 
@@ -326,7 +375,7 @@ class SO100FollowScript:
         kinematics_config_dir = "/home/hph/Documents/so100_follower/so100_ext/config/motion_policy_configs"
 
         self._kinematics_solver = LulaKinematicsSolver(
-            robot_description_path = kinematics_config_dir + "/SO100/rmpflow/robot_descriptor.yaml",
+            robot_description_path = kinematics_config_dir + "/SO100/rmpflow/robot_descriptor_follow.yaml",
             urdf_path = kinematics_config_dir + "/SO100/urdf/SO_5DOF_ARM100_8j_URDF.SLDASM.urdf"
         )
 
@@ -367,7 +416,7 @@ class SO100FollowScript:
         robot_base_translation,robot_base_orientation = self._articulation.get_world_pose()
         self._kinematics_solver.set_robot_base_pose(robot_base_translation,robot_base_orientation)
 
-        action, success = self._articulation_kinematics_solver.compute_inverse_kinematics(target_position, target_orientation)
+        action, success = self._articulation_kinematics_solver.compute_inverse_kinematics(target_position, target_orientation) # target_orientation)
 
         if success:
             self._articulation.apply_action(action)

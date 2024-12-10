@@ -12,17 +12,17 @@ cspace:
     - Elbow
     - Wrist_Pitch
     - Wrist_Roll
-    # - Jaw
+    - Jaw
 default_q: [
-    0.0,0.0,-0.0,0.0,0.0 #,0.0
+    0.0,0.0,-0.0,0.0,0.0,0.0
 ]
 
 acceleration_limits: [
-   10,10,10,10,10 #,10
+   10,10,10,10,10,10
 ]
 
 jerk_limits: [
-   10000,10000,10000,10000,10000 #,10000
+   10000,10000,10000,10000,10000,10000
 ]
 
 # Most dimensions of the cspace have a direct corresponding element

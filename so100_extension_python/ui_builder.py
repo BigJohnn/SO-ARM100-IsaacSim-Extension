@@ -131,6 +131,7 @@ class UIBuilder:
         self._cuboid = None
         
         use_follow=False
+        use_follow=True
         if use_follow:
             self._scenario = SO100FollowScript()
         else:
